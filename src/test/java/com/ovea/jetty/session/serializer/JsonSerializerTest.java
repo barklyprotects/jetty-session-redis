@@ -40,6 +40,7 @@ public final class JsonSerializerTest {
     private Map<String, Object> attributes = new HashMap<String, Object>();
     private InetAddress addr;
 
+
     @Test
     public void test() throws Exception {
         addr = InetAddress.getLocalHost();

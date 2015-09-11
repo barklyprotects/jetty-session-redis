@@ -25,6 +25,7 @@ import redis.clients.jedis.TransactionBlock;
 import redis.clients.jedis.exceptions.JedisException;
 
 import javax.naming.InitialContext;
+import javax.servlet.http.HttpServletRequest;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -120,5 +121,4 @@ public final class RedisSessionIdManager extends SessionIdManagerSkeleton {
             LOG.debug("[RedisSessionIdManager] Scavenger found {} sessions to expire: {}", expired.size(), expired);
         return expired;
     }
-
 }

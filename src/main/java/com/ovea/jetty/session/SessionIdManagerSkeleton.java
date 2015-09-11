@@ -160,6 +160,21 @@ public abstract class SessionIdManagerSkeleton extends AbstractSessionIdManager 
         }
     }
 
+    @Override
+    public final void renewSessionId(final String oldClusterId, final String oldNodeId, final HttpServletRequest request) {
+        //generate a new id
+        final String newClusterId = newSessionId(request.hashCode());
+        sessions.remove(oldClusterId);
+        storeClusterId(newClusterId);
+        sessions.putIfAbsent(newClusterId,Void.class);
+        forEachSessionManager(new SessionManagerCallback() {
+            @Override
+            public void execute(SessionManagerSkeleton sessionManager) {
+                sessionManager.renewSessionId(oldClusterId,oldNodeId,newClusterId,getNodeId(newClusterId,request));
+            }
+        });
+    }
+
     protected abstract void deleteClusterId(String clusterId);
 
     protected abstract void storeClusterId(String clusterId);

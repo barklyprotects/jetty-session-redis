@@ -255,7 +255,7 @@ public final class RedisSessionManager extends SessionManagerSkeleton<RedisSessi
             super.setMaxInactiveInterval(parseInt(redisData.get("maxIdle")));
             setCookieSetTime(parseLong(redisData.get("cookieSet")));
             for (Map.Entry<String, Object> entry : attributes.entrySet()) {
-                super.doPutOrRemove(entry.getKey(), entry.getValue());
+                setAttribute(entry.getKey(), entry.getValue());
             }
             super.access(parseLong(redisData.get("lastAccessed")));
         }
@@ -277,12 +277,50 @@ public final class RedisSessionManager extends SessionManagerSkeleton<RedisSessi
             redisMap.put("attributes", "");
         }
 
+        @Override
+        public Object doPutOrRemove(String s, Object o) {
+            return null;
+        }
+
+        @Override
+        public Object doGet(String s) {
+            return null;
+        }
+
+        @Override
+        public Enumeration<String> doGetAttributeNames() {
+            return null;
+        }
+
         public final Map<String, Object> getSessionAttributes() {
             Map<String, Object> attrs = new LinkedHashMap<String, Object>();
-            for (String key : super.getNames()) {
-                attrs.put(key, super.doGet(key));
+            Enumeration<String> keys = super.getAttributeNames();
+            while (keys.hasMoreElements()) {
+                String key = keys.nextElement();
+                attrs.put(key, super.getAttribute(key));
             }
             return attrs;
+        }
+
+        @Override
+        public Map<String, Object> getAttributeMap() {
+            Map<String, Object> attributes = new HashMap();
+            Enumeration<String> keys = super.getAttributeNames();
+            while (keys.hasMoreElements()) {
+                String key = keys.nextElement();
+                attributes.put(key, super.getAttribute(key));
+            }
+            return attributes;
+        }
+
+        @Override
+        public int getAttributes() {
+            return 0;
+        }
+
+        @Override
+        public Set<String> getNames() {
+            return null;
         }
 
         @Override
@@ -331,6 +369,11 @@ public final class RedisSessionManager extends SessionManagerSkeleton<RedisSessi
                     redisMap.clear();
                 }
             }
+        }
+
+        @Override
+        public void clearAttributes() {
+
         }
 
         public boolean requestStarted() {
