@@ -230,7 +230,7 @@ public final class RedisSessionManager extends SessionManagerSkeleton<RedisSessi
 
         private RedisSession(HttpServletRequest request) {
             super(request);
-            lastNode = getSessionIdManager().getWorkerName();
+            lastNode = getSessionIdManager().getWorkerName() == null ? "" : getSessionIdManager().getWorkerName();
             long ttl = getMaxInactiveInterval();
             expiryTime = ttl <= 0 ? 0 : System.currentTimeMillis() / 1000 + ttl;
             // new session so prepare redis map accordingly
@@ -277,20 +277,6 @@ public final class RedisSessionManager extends SessionManagerSkeleton<RedisSessi
             redisMap.put("attributes", "");
         }
 
-        @Override
-        public Object doPutOrRemove(String s, Object o) {
-            return null;
-        }
-
-        @Override
-        public Object doGet(String s) {
-            return null;
-        }
-
-        @Override
-        public Enumeration<String> doGetAttributeNames() {
-            return null;
-        }
 
         public final Map<String, Object> getSessionAttributes() {
             Map<String, Object> attrs = new LinkedHashMap<String, Object>();
@@ -300,27 +286,6 @@ public final class RedisSessionManager extends SessionManagerSkeleton<RedisSessi
                 attrs.put(key, super.getAttribute(key));
             }
             return attrs;
-        }
-
-        @Override
-        public Map<String, Object> getAttributeMap() {
-            Map<String, Object> attributes = new HashMap();
-            Enumeration<String> keys = super.getAttributeNames();
-            while (keys.hasMoreElements()) {
-                String key = keys.nextElement();
-                attributes.put(key, super.getAttribute(key));
-            }
-            return attributes;
-        }
-
-        @Override
-        public int getAttributes() {
-            return 0;
-        }
-
-        @Override
-        public Set<String> getNames() {
-            return null;
         }
 
         @Override
