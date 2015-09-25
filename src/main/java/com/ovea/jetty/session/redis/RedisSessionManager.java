@@ -119,7 +119,7 @@ public final class RedisSessionManager extends SessionManagerSkeleton<RedisSessi
             //if the session in the database has not already expired
             if (loaded.expiryTime * 1000 > now) {
                 //session last used on a different node, or we don't have it in memory
-                loaded.changeLastNode(getSessionIdManager().getWorkerName());
+                loaded.changeLastNode(getSessionIdManager().getWorkerName() == null ? "" : getSessionIdManager().getWorkerName());
             } else {
                 LOG.debug("[RedisSessionManager] loadSession - Loaded session has expired, id={}", clusterId);
                 loaded = null;

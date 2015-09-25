@@ -15,6 +15,10 @@
  */
 package com.ovea.jetty.session.serializer;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -22,6 +26,7 @@ import org.junit.runners.JUnit4;
 import java.net.InetAddress;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
@@ -39,7 +44,6 @@ public final class JsonSerializerTest {
     private transient int b = 1;
     private Map<String, Object> attributes = new HashMap<String, Object>();
     private InetAddress addr;
-
 
     @Test
     public void test() throws Exception {

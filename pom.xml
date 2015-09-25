@@ -74,6 +74,13 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- serialization of Apache Shiro Principals -->
+        <dependency>
+            <groupId>org.apache.shiro</groupId>
+            <artifactId>shiro-core</artifactId>
+            <version>1.2.3</version>
+        </dependency>
+
         <!-- testing -->
         <dependency>
             <groupId>junit</groupId>
