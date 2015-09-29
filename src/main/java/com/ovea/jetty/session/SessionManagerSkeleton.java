@@ -17,17 +17,15 @@ package com.ovea.jetty.session;
 
 import org.eclipse.jetty.server.session.AbstractSession;
 import org.eclipse.jetty.server.session.AbstractSessionManager;
+import org.eclipse.jetty.server.session.MemSession;
 import org.eclipse.jetty.util.LazyList;
 import org.eclipse.jetty.util.log.Log;
 import org.eclipse.jetty.util.log.Logger;
-
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSessionEvent;
 import javax.servlet.http.HttpSessionListener;
 import java.lang.reflect.Field;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -77,7 +75,7 @@ public abstract class SessionManagerSkeleton<T extends SessionManagerSkeleton.Se
     }
 
     @Override
-    public final void removeSession(AbstractSession sess, boolean invalidate) {
+    public final boolean removeSession(AbstractSession sess, boolean invalidate) {
         @SuppressWarnings({"unchecked"}) T session = (T) sess;
         String clusterId = getClusterId(session);
         boolean removed = removeSession(clusterId);
@@ -96,6 +94,7 @@ public abstract class SessionManagerSkeleton<T extends SessionManagerSkeleton.Se
                 session.willPassivate();
             }
         }
+        return removed;
     }
 
     @Override
@@ -126,15 +125,10 @@ public abstract class SessionManagerSkeleton<T extends SessionManagerSkeleton.Se
         }
     }
 
-    @SuppressWarnings({"deprecation"})
-    @Override
-    @Deprecated
-    public final Map getSessionMap() {
-        return Collections.unmodifiableMap(sessions);
-    }
+
 
     @Override
-    protected final void invalidateSessions() {
+    protected final void shutdownSessions() {
         //Do nothing - we don't want to remove and
         //invalidate all the sessions because this
         //method is called from doStop(), and just
@@ -207,7 +201,7 @@ public abstract class SessionManagerSkeleton<T extends SessionManagerSkeleton.Se
 
     protected abstract T loadSession(String clusterId, T current);
 
-    public abstract class SessionSkeleton extends AbstractSession {
+    public abstract class SessionSkeleton extends MemSession {
 
         public SessionSkeleton(HttpServletRequest request) {
             super(SessionManagerSkeleton.this, request);
@@ -224,7 +218,8 @@ public abstract class SessionManagerSkeleton<T extends SessionManagerSkeleton.Se
             super.timeout();
         }
 
-        protected void setCookieSetTime(long time) {
+        @Override
+        public void setCookieSetTime(long time) {
             try {
                 _cookieSet.set(this, time);
             } catch (IllegalAccessException e) {

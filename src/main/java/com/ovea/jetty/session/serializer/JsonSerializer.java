@@ -15,17 +15,24 @@
  */
 package com.ovea.jetty.session.serializer;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.introspect.VisibilityChecker;
 import com.ovea.jetty.session.SerializerException;
-import org.codehaus.jackson.map.DeserializationConfig;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.SerializationConfig;
-import org.codehaus.jackson.map.introspect.AnnotatedField;
-import org.codehaus.jackson.map.introspect.JacksonAnnotationIntrospector;
-import org.codehaus.jackson.map.introspect.VisibilityChecker;
+import org.apache.shiro.subject.SimplePrincipalCollection;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
-import static org.codehaus.jackson.annotate.JsonAutoDetect.Visibility.ANY;
 
 /**
  * @author Mathieu Carbou (mathieu.carbou@gmail.com)
@@ -37,28 +44,13 @@ public final class JsonSerializer extends SerializerSkeleton {
     @Override
     public void start() {
         mapper = new ObjectMapper();
-
-        mapper.configure(SerializationConfig.Feature.WRAP_ROOT_VALUE, false);
-        mapper.configure(SerializationConfig.Feature.INDENT_OUTPUT, false);
-        mapper.configure(SerializationConfig.Feature.AUTO_DETECT_GETTERS, false);
-        mapper.configure(SerializationConfig.Feature.AUTO_DETECT_IS_GETTERS, false);
-        mapper.configure(SerializationConfig.Feature.AUTO_DETECT_FIELDS, true);
-        mapper.configure(SerializationConfig.Feature.CAN_OVERRIDE_ACCESS_MODIFIERS, true);
-        mapper.configure(SerializationConfig.Feature.USE_STATIC_TYPING, false);
-        mapper.configure(SerializationConfig.Feature.WRITE_ENUMS_USING_TO_STRING, false);
-        mapper.configure(SerializationConfig.Feature.SORT_PROPERTIES_ALPHABETICALLY, true);
-        mapper.configure(SerializationConfig.Feature.USE_ANNOTATIONS, true);
-
-        mapper.configure(DeserializationConfig.Feature.USE_ANNOTATIONS, true);
-        mapper.configure(DeserializationConfig.Feature.AUTO_DETECT_SETTERS, false);
-        mapper.configure(DeserializationConfig.Feature.AUTO_DETECT_CREATORS, true);
-        mapper.configure(DeserializationConfig.Feature.AUTO_DETECT_FIELDS, true);
-        mapper.configure(DeserializationConfig.Feature.USE_GETTERS_AS_SETTERS, false);
-        mapper.configure(DeserializationConfig.Feature.CAN_OVERRIDE_ACCESS_MODIFIERS, true);
-        mapper.configure(DeserializationConfig.Feature.READ_ENUMS_USING_TO_STRING, true);
-
-        mapper.setVisibilityChecker(new VisibilityChecker.Std(ANY, ANY, ANY, ANY, ANY));
-
+        mapper.setVisibility(VisibilityChecker.Std.defaultInstance().withFieldVisibility(JsonAutoDetect.Visibility.ANY)
+                .withGetterVisibility(JsonAutoDetect.Visibility.NONE));
+        mapper.configure(SerializationFeature.WRAP_ROOT_VALUE, false);
+        mapper.configure(SerializationFeature.INDENT_OUTPUT, false);
+        mapper.configure(SerializationFeature.WRITE_ENUMS_USING_TO_STRING, false);
+        mapper.configure(DeserializationFeature.READ_ENUMS_USING_TO_STRING, true);
+        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,false);
         super.start();
     }
 
@@ -79,10 +71,62 @@ public final class JsonSerializer extends SerializerSkeleton {
 
     @Override
     public <T> T deserialize(String o, Class<T> targetType) throws SerializerException {
+        if (targetType.getName().equals("java.util.Map")) {
+            return deserialize(o);
+        } else {
+            try {
+                return mapper.readValue(o,targetType);
+            } catch (Exception e) {
+                throw new SerializerException(e);
+            }
+        }
+    }
+
+    public <T> T deserialize(String o) throws SerializerException {
         try {
-            return mapper.readValue(o, targetType);
-        } catch (IOException e) {
+            JsonFactory jsonFactory = new JsonFactory();
+            JsonParser parser = jsonFactory.createParser(o);
+            parser.setCodec(mapper);
+            JsonNode node = parser.readValueAsTree();
+            HashMap<String,Object> attributes = new LinkedHashMap<String, Object>();
+            processAttributes(attributes,node);
+            return (T) attributes;
+        } catch (Exception e) {
             throw new SerializerException(e);
+        } 
+    }
+
+    protected void processAttributes(Map<String, Object> attributes, JsonNode jsonNode) throws JsonProcessingException {
+        Iterator<Map.Entry<String, JsonNode>> ite = jsonNode.fields();
+        while (ite.hasNext()) {
+            Map.Entry<String, JsonNode> entry = ite.next();
+            if (entry.getValue().isObject()) {
+                if (entry.getKey().equals("org.apache.shiro.subject.support.DefaultSubjectContext_PRINCIPALS_SESSION_KEY")) {
+                    SimplePrincipalCollection collection = mapper.treeToValue(entry.getValue(),SimplePrincipalCollection.class);
+                    attributes.put(entry.getKey(),collection);
+                } else {
+                    processAttributes(attributes, entry.getValue());
+                }
+            } else {
+                JsonNode value = entry.getValue();
+                switch (value.getNodeType()) {
+                    case BOOLEAN:
+                        attributes.put(entry.getKey(),value.asBoolean());
+                        break;
+                    case STRING:
+                        attributes.put(entry.getKey(),value.asText());
+                        break;
+                    case NUMBER:
+                        if (value.canConvertToInt()) {
+                            attributes.put(entry.getKey(),value.asInt());
+                        } else {
+                            attributes.put(entry.getKey(),value.asDouble());
+                        }
+                        break;
+                    default:
+                        attributes.put(entry.getKey(), entry.getValue().toString());
+                }
+            }
         }
     }
 }

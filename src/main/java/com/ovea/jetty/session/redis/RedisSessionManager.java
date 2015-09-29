@@ -17,7 +17,7 @@ package com.ovea.jetty.session.redis;
 
 import com.ovea.jetty.session.Serializer;
 import com.ovea.jetty.session.SessionManagerSkeleton;
-import com.ovea.jetty.session.serializer.XStreamSerializer;
+import com.ovea.jetty.session.serializer.JsonSerializer;
 import org.eclipse.jetty.util.log.Log;
 import org.eclipse.jetty.util.log.Logger;
 import redis.clients.jedis.Jedis;
@@ -46,11 +46,11 @@ public final class RedisSessionManager extends SessionManagerSkeleton<RedisSessi
     private long saveIntervalSec = 20; //only persist changes to session access times every 20 secs
 
     public RedisSessionManager(JedisPool jedisPool) {
-        this(jedisPool, new XStreamSerializer());
+        this(jedisPool, new JsonSerializer());
     }
 
     public RedisSessionManager(String jndiName) {
-        this(jndiName, new XStreamSerializer());
+        this(jndiName, new JsonSerializer());
     }
 
     public RedisSessionManager(JedisPool jedisPool, Serializer serializer) {
@@ -119,7 +119,7 @@ public final class RedisSessionManager extends SessionManagerSkeleton<RedisSessi
             //if the session in the database has not already expired
             if (loaded.expiryTime * 1000 > now) {
                 //session last used on a different node, or we don't have it in memory
-                loaded.changeLastNode(getSessionIdManager().getWorkerName());
+                loaded.changeLastNode(getSessionIdManager().getWorkerName() == null ? "" : getSessionIdManager().getWorkerName());
             } else {
                 LOG.debug("[RedisSessionManager] loadSession - Loaded session has expired, id={}", clusterId);
                 loaded = null;
@@ -230,7 +230,7 @@ public final class RedisSessionManager extends SessionManagerSkeleton<RedisSessi
 
         private RedisSession(HttpServletRequest request) {
             super(request);
-            lastNode = getSessionIdManager().getWorkerName();
+            lastNode = getSessionIdManager().getWorkerName() == null ? "" : getSessionIdManager().getWorkerName();
             long ttl = getMaxInactiveInterval();
             expiryTime = ttl <= 0 ? 0 : System.currentTimeMillis() / 1000 + ttl;
             // new session so prepare redis map accordingly
@@ -255,7 +255,7 @@ public final class RedisSessionManager extends SessionManagerSkeleton<RedisSessi
             super.setMaxInactiveInterval(parseInt(redisData.get("maxIdle")));
             setCookieSetTime(parseLong(redisData.get("cookieSet")));
             for (Map.Entry<String, Object> entry : attributes.entrySet()) {
-                super.doPutOrRemove(entry.getKey(), entry.getValue());
+                setAttribute(entry.getKey(), entry.getValue());
             }
             super.access(parseLong(redisData.get("lastAccessed")));
         }
@@ -277,10 +277,13 @@ public final class RedisSessionManager extends SessionManagerSkeleton<RedisSessi
             redisMap.put("attributes", "");
         }
 
+
         public final Map<String, Object> getSessionAttributes() {
             Map<String, Object> attrs = new LinkedHashMap<String, Object>();
-            for (String key : super.getNames()) {
-                attrs.put(key, super.doGet(key));
+            Enumeration<String> keys = super.getAttributeNames();
+            while (keys.hasMoreElements()) {
+                String key = keys.nextElement();
+                attrs.put(key, super.getAttribute(key));
             }
             return attrs;
         }
@@ -331,6 +334,11 @@ public final class RedisSessionManager extends SessionManagerSkeleton<RedisSessi
                     redisMap.clear();
                 }
             }
+        }
+
+        @Override
+        public void clearAttributes() {
+
         }
 
         public boolean requestStarted() {
