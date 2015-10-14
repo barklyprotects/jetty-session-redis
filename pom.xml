@@ -21,6 +21,21 @@
         <url>http://github.com/Ovea/${project.name}</url>
     </scm>
 
+    <distributionManagement>
+        <!-- Publish the versioned releases here -->
+        <snapshotRepository>
+            <id>cylent-nexus</id>
+            <name>cylent nexus</name>
+            <url>https://nexus.barklyprotects.com/content/repositories/snapshots</url>
+        </snapshotRepository>
+        <!-- Publish the versioned releases here -->
+        <repository>
+            <id>cylent-nexus</id>
+            <name>cylent nexus</name>
+            <url>https://nexus.barklyprotects.com/content/repositories/releases</url>
+        </repository>
+    </distributionManagement>
+
     <dependencies>
         <dependency>
             <groupId>redis.clients</groupId>
