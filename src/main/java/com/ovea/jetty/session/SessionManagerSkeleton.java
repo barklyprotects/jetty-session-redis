@@ -99,7 +99,7 @@ public abstract class SessionManagerSkeleton<T extends SessionManagerSkeleton.Se
 
     @Override
     protected final boolean removeSession(String clusterId) {
-        synchronized (this) {
+        synchronized (sessions) {
             T session = sessions.remove(clusterId);
             try {
                 if (session != null)
