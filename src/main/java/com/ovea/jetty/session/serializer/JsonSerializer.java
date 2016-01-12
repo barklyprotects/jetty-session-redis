@@ -44,7 +44,7 @@ public final class JsonSerializer extends SerializerSkeleton {
     @Override
     public void start() {
         mapper = new ObjectMapper();
-        mapper.setVisibility(VisibilityChecker.Std.defaultInstance().withFieldVisibility(JsonAutoDetect.Visibility.ANY)
+        mapper.setVisibilityChecker(VisibilityChecker.Std.defaultInstance().withFieldVisibility(JsonAutoDetect.Visibility.ANY)
                 .withGetterVisibility(JsonAutoDetect.Visibility.NONE));
         mapper.configure(SerializationFeature.WRAP_ROOT_VALUE, false);
         mapper.configure(SerializationFeature.INDENT_OUTPUT, false);
